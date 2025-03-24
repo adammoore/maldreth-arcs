@@ -1,0 +1,31 @@
+name: Deploy to Streamlit Cloud
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.10'
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          
+      - name: Create data directory if it doesn't exist
+        run: mkdir -p data
+        
+      - name: Generate lifecycle data if not exists
+        run: |
+          if [ ! -f data/lifecycle_data.json ]; then
+            python -c "from utils.data_loader import create_example_data; import json; import os; os.makedirs('
