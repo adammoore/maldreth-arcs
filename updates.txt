@@ -1,0 +1,26 @@
+# Updates Log for MaLDReTH Research Data Lifecycle Visualization
+
+## 2024-03-24: Refactored for Three-Level Visualization
+- Updated visualization code to implement a three-level concentric circle layout:
+  - Inner ring: Lifecycle stages
+  - Middle ring: Tool categories/substages
+  - Outer ring: Tool exemplars
+- Improved color coding to maintain consistency across levels
+- Enhanced hover functionality with more detailed information
+- Added curved connections between stages with proper arrows
+
+## 2024-03-24: Enhanced Data Model
+- Updated data loader to provide a more complete dataset
+- Created data extractor utilities for better organization
+- Improved handling of categories and tools
+
+## 2024-03-24: Improved User Interface
+- Added detailed explanation of the three-level structure
+- Enhanced the statistics displays
+- Improved responsiveness for different screen sizes
+- Added more interactive elements to the visualization
+
+## 2024-03-24: Deployment Improvements
+- Enhanced GitHub Actions workflow for more robust deployment
+- Improved error handling in data loading
+- Added automatic creation of necessary directories
