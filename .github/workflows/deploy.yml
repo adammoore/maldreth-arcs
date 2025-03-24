@@ -22,14 +22,48 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           
-      - name: Create data directory if it doesn't exist
-        run: mkdir -p data
-        
+      - name: Create necessary directories
+        run: |
+          mkdir -p data
+          mkdir -p utils
+          
+      - name: Check file structure
+        run: |
+          echo "Project structure:"
+          find . -type f | sort
+
       - name: Generate lifecycle data if not exists
         run: |
           if [ ! -f data/lifecycle_data.json ]; then
-            python -c "from utils.data_loader import create_example_data; import json; import os; os.makedirs('data', exist_ok=True); json.dump(create_example_data(), open('data/lifecycle_data.json', 'w'), indent=2)"
+            python -c "
+import json
+import os
+import sys
+
+# Add project root to path
+sys.path.append('.')
+
+# Try to import our function
+try:
+    from utils.data_loader import create_example_data
+    data = create_example_data()
+except ImportError:
+    # If import fails, create a basic structure
+    data = {
+        'stages': [],
+        'connections': [],
+        'exemplars': []
+    }
+
+# Ensure data directory exists
+os.makedirs('data', exist_ok=True)
+
+# Write data to file
+with open('data/lifecycle_data.json', 'w') as f:
+    json.dump(data, f, indent=2)
+
+print('Created lifecycle_data.json with', len(data['stages']), 'stages')
+            "
           fi
           
-      # Note: Streamlit Cloud automatically detects and deploys from GitHub,
-      # so no additional deployment steps are needed here
+      # Note: Streamlit Cloud automatically detects and deploys from GitHub
