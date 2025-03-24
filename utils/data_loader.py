@@ -34,7 +34,7 @@ def load_lifecycle_data():
 
 def create_example_data():
     """
-    Create example lifecycle data.
+    Create example lifecycle data with three levels: stages, substages (categories), and tools.
     
     Returns:
         dict: Example lifecycle data.
@@ -124,8 +124,62 @@ def create_example_data():
             {"stage": "Conceptualise", "category": "Mind mapping", "name": "MindMeister", "description": "Online mind mapping software for brainstorming and idea management"},
             {"stage": "Conceptualise", "category": "Mind mapping", "name": "XMind", "description": "Full-featured mind mapping and brainstorming tool"},
             {"stage": "Conceptualise", "category": "Diagramming", "name": "Lucidchart", "description": "Web-based diagramming application for creating flowcharts, org charts, and more"},
+            {"stage": "Conceptualise", "category": "Diagramming", "name": "Draw.io", "description": "Free online diagram software for making flowcharts, process diagrams, etc."},
+            {"stage": "Conceptualise", "category": "Wireframing", "name": "Balsamiq", "description": "Rapid wireframing tool that helps you create mockups quickly"},
+            
             {"stage": "Plan", "category": "Data Management Planning", "name": "DMPTool", "description": "Tool for creating data management plans that meet institutional and funder requirements"},
-            {"stage": "Plan", "category": "Project Planning", "name": "Trello", "description": "Web-based Kanban-style list-making application for project management"}
-            # More exemplars would be added here in a real implementation
+            {"stage": "Plan", "category": "Data Management Planning", "name": "DMPonline", "description": "Web-based tool to create, share, and export data management plans"},
+            {"stage": "Plan", "category": "Project Planning", "name": "Trello", "description": "Web-based Kanban-style list-making application for project management"},
+            {"stage": "Plan", "category": "Project Planning", "name": "Asana", "description": "Web-based project management tool that helps teams organize and track their work"},
+            {"stage": "Plan", "category": "Project Planning", "name": "Microsoft Project", "description": "Project management software for project scheduling and resource allocation"},
+            {"stage": "Plan", "category": "Combined DMP/Project", "name": "Data Stewardship Wizard", "description": "Tool that combines project planning with data management plan creation"},
+            
+            {"stage": "Fund", "category": "Funding Information", "name": "ResearchProfessional", "description": "Comprehensive database of research funding opportunities"},
+            {"stage": "Fund", "category": "Funding Information", "name": "Pivot", "description": "Database for discovering funding opportunities and research collaborators"},
+            
+            {"stage": "Collect", "category": "Quantitative Data", "name": "Open Data Kit", "description": "Open-source tool for mobile data collection"},
+            {"stage": "Collect", "category": "Quantitative Data", "name": "GBIF", "description": "Global Biodiversity Information Facility for biodiversity data collection"},
+            {"stage": "Collect", "category": "Qualitative Data", "name": "SurveyMonkey", "description": "Cloud-based survey tool for creating, distributing, and analyzing surveys"},
+            {"stage": "Collect", "category": "Qualitative Data", "name": "Zooniverse", "description": "Platform for people-powered research through citizen science"},
+            {"stage": "Collect", "category": "Harvesting", "name": "DROID", "description": "Tool for file format identification"},
+            
+            {"stage": "Process", "category": "Electronic Lab Notebooks", "name": "RSpace", "description": "Electronic lab notebook software for researchers"},
+            {"stage": "Process", "category": "Electronic Lab Notebooks", "name": "eLabNext", "description": "Digital lab notebook for organizing research data"},
+            {"stage": "Process", "category": "Scientific Computing", "name": "Jupyter", "description": "Web application for creating and sharing documents with live code, equations, and visualizations"},
+            {"stage": "Process", "category": "Metadata Tools", "name": "CEDAR Workbench", "description": "Tool for metadata creation and management in biomedical research"},
+            
+            {"stage": "Analyse", "category": "Statistical Software", "name": "SPSS", "description": "Software package for statistical analysis"},
+            {"stage": "Analyse", "category": "Statistical Software", "name": "Matlab", "description": "Multi-paradigm numerical computing environment and programming language"},
+            {"stage": "Analyse", "category": "Computational Tools", "name": "RStudio", "description": "Integrated development environment for R, a programming language for statistical computing"},
+            {"stage": "Analyse", "category": "Computational Tools", "name": "Eclipse", "description": "Integrated development environment used in computer programming"},
+            
+            {"stage": "Store", "category": "Data Repository", "name": "Figshare", "description": "Repository where users can make all of their research outputs available in a citable, shareable and discoverable manner"},
+            {"stage": "Store", "category": "Data Repository", "name": "Zenodo", "description": "General-purpose open-access repository for research data"},
+            {"stage": "Store", "category": "Data Repository", "name": "Dataverse", "description": "Open source web application to share, preserve, cite, explore, and analyze research data"},
+            {"stage": "Store", "category": "Management Tools", "name": "iRODS", "description": "Integrated Rule-Oriented Data System for data management"},
+            
+            {"stage": "Publish", "category": "Discipline Repository", "name": "NOMAD-OASIS", "description": "Repository for materials science data"},
+            {"stage": "Publish", "category": "Generalist Repository", "name": "Figshare", "description": "Repository for research outputs including figures, datasets, media, papers, posters, presentations and filesets"},
+            {"stage": "Publish", "category": "Generalist Repository", "name": "Zenodo", "description": "General-purpose open-access repository"},
+            {"stage": "Publish", "category": "Metadata Repository", "name": "DataCite Commons", "description": "Repository for storing and sharing metadata"},
+            
+            {"stage": "Preserve", "category": "Data Repository", "name": "Dataverse", "description": "Repository software for research data preservation"},
+            {"stage": "Preserve", "category": "Archive", "name": "Archivematica", "description": "Digital preservation system designed to maintain long-term access to digital content"},
+            {"stage": "Preserve", "category": "Containers", "name": "Docker", "description": "Platform for developing, shipping, and running applications in containers"},
+            
+            {"stage": "Share", "category": "Data Repository", "name": "Figshare", "description": "Repository for sharing research data and other outputs"},
+            {"stage": "Share", "category": "Data Repository", "name": "Zenodo", "description": "Repository for sharing research data outputs"},
+            {"stage": "Share", "category": "Electronic Lab Notebooks", "name": "RSpace", "description": "Platform for sharing lab research data"},
+            
+            {"stage": "Access", "category": "Data Repository", "name": "CKAN", "description": "Open-source data management system for powering data hubs and data portals"},
+            {"stage": "Access", "category": "Database", "name": "PostgreSQL", "description": "Open-source relational database system"},
+            {"stage": "Access", "category": "Database", "name": "MySQL", "description": "Open-source relational database management system"},
+            {"stage": "Access", "category": "Authentication", "name": "LDAP", "description": "Lightweight Directory Access Protocol for accessing directories"},
+            {"stage": "Access", "category": "Authentication", "name": "SAML", "description": "Security Assertion Markup Language for exchanging authentication data"},
+            
+            {"stage": "Transform", "category": "Programming Languages", "name": "Python", "description": "Interpreted high-level programming language for general-purpose programming"},
+            {"stage": "Transform", "category": "Programming Languages", "name": "Perl", "description": "Family of programming languages for text processing"},
+            {"stage": "Transform", "category": "ETL Tools", "name": "Apache Spark", "description": "Unified analytics engine for large-scale data processing"},
+            {"stage": "Transform", "category": "ETL Tools", "name": "Snowflake", "description": "Cloud-based data warehousing platform"}
         ]
     }
