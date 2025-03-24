@@ -28,4 +28,8 @@ jobs:
       - name: Generate lifecycle data if not exists
         run: |
           if [ ! -f data/lifecycle_data.json ]; then
-            python -c "from utils.data_loader import create_example_data; import json; import os; os.makedirs('
+            python -c "from utils.data_loader import create_example_data; import json; import os; os.makedirs('data', exist_ok=True); json.dump(create_example_data(), open('data/lifecycle_data.json', 'w'), indent=2)"
+          fi
+          
+      # Note: Streamlit Cloud automatically detects and deploys from GitHub,
+      # so no additional deployment steps are needed here
