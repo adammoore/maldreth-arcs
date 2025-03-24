@@ -1,0 +1,70 @@
+/* Custom styles for the MaLDReTH Research Data Lifecycle Visualization */
+
+/* Main header styling */
+h1 {
+    color: #2c3e50;
+    font-size: 2.2rem;
+    margin-bottom: 1rem;
+    text-align: center;
+}
+
+h2 {
+    color: #3498db;
+    font-size: 1.8rem;
+    margin-top: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+h3 {
+    color: #2980b9;
+    font-size: 1.4rem;
+    margin-top: 1.2rem;
+    margin-bottom: 0.8rem;
+}
+
+/* Improve dataframe styling */
+.dataframe {
+    font-size: 0.9rem !important;
+}
+
+/* Stage expander styling */
+.streamlit-expanderHeader {
+    font-size: 1.1rem;
+    font-weight: bold;
+}
+
+/* Plotly chart container */
+.stPlotlyChart {
+    border-radius: 10px;
+    background-color: #f8f9fa;
+    padding: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Footer styling */
+footer {
+    margin-top: 2rem;
+    text-align: center;
+    font-size: 0.8rem;
+    color: #7f8c8d;
+}
+
+/* Sidebar styling */
+.sidebar .sidebar-content {
+    background-color: #f0f6fc;
+}
+
+/* Make sure the visualization is responsive */
+@media (max-width: 768px) {
+    h1 {
+        font-size: 1.8rem;
+    }
+    
+    h2 {
+        font-size: 1.5rem;
+    }
+    
+    h3 {
+        font-size: 1.2rem;
+    }
+}
