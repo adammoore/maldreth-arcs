@@ -1,9 +1,29 @@
 [theme]
+# Primary color for interactive elements
 primaryColor = "#3498db"
+
+# Background color of the main content area
 backgroundColor = "#ffffff"
+
+# Background color used for the sidebar and most interactive widgets
 secondaryBackgroundColor = "#f8f9fa"
+
+# Color used for almost all text
 textColor = "#2c3e50"
+
+# Font family for all text
 font = "sans serif"
 
 [server]
+# If true, app will be updated when the source file changes
 runOnSave = true
+
+# Maximum size of uploaded files in MB
+maxUploadSize = 200
+
+# Maximum size of the request body in MB
+maxMessageSize = 200
+
+[browser]
+# Controls whether the browser is automatically opened when the Streamlit app starts
+gatherUsageStats = false
