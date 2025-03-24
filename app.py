@@ -2,7 +2,7 @@
 MaLDReTH Research Data Lifecycle Visualization
 
 A Streamlit application that visualizes the MaLDReTH Research Data Lifecycle
-with tool exemplars, implemented in a style similar to the Harvard RDM visualization.
+with a three-level structure: stages, substages, and tools.
 """
 
 import streamlit as st
@@ -27,7 +27,11 @@ with open(os.path.join("utils", "styles.css")) as f:
 # Page header
 st.title("MaLDReTH Research Data Lifecycle")
 st.markdown("""
-This visualization shows the MaLDReTH Research Data Lifecycle with tool exemplars for each stage.
+This visualization shows the MaLDReTH Research Data Lifecycle with a three-level structure:
+- **Inner Ring**: Lifecycle Stages
+- **Middle Ring**: Tool Categories/Substages
+- **Outer Ring**: Tool Exemplars
+
 Use the controls below to explore the lifecycle and learn about the various tools available at each stage.
 """)
 
@@ -44,23 +48,36 @@ view_mode = st.sidebar.radio(
 )
 
 # Stage filter for focused view
+selected_stage = None
+selected_categories = None
+
 if view_mode == "Focus on Stage":
     selected_stage = st.sidebar.selectbox(
         "Select Stage to Focus On",
         [stage["name"] for stage in lifecycle_data["stages"]]
     )
+    
+    # Get categories for the selected stage
+    if selected_stage:
+        stage_categories = set()
+        for exemplar in lifecycle_data["exemplars"]:
+            if exemplar["stage"] == selected_stage:
+                stage_categories.add(exemplar["category"])
+        
+        st.sidebar.markdown(f"### Categories in {selected_stage}")
+        for category in sorted(stage_categories):
+            st.sidebar.markdown(f"- {category}")
+
 elif view_mode == "Compare Tools":
     # Multi-select for tool categories
-    all_categories = []
-    for stage in lifecycle_data["stages"]:
-        for exemplar in lifecycle_data["exemplars"]:
-            if exemplar["stage"] == stage["name"] and exemplar["category"] not in all_categories:
-                all_categories.append(exemplar["category"])
+    all_categories = set()
+    for exemplar in lifecycle_data["exemplars"]:
+        all_categories.add(exemplar["category"])
     
     selected_categories = st.sidebar.multiselect(
         "Select Tool Categories to Compare",
         sorted(all_categories),
-        default=all_categories[:3] if len(all_categories) > 3 else all_categories
+        default=list(sorted(all_categories))[:3] if len(all_categories) > 3 else list(sorted(all_categories))
     )
 
 # Display options
@@ -76,12 +93,43 @@ connection_type = st.sidebar.multiselect(
 # Main visualization
 st.header("Lifecycle Visualization")
 
+# Explanation of the three-level structure
+with st.expander("How to Read This Visualization", expanded=False):
+    st.markdown("""
+    ### Three-Level Structure
+    
+    This visualization uses a concentric circle layout with three levels:
+    
+    1. **Inner Ring (Center)**: Research Data Lifecycle Stages
+        - These are the main phases of the research data lifecycle
+        - Color-coded for easy identification
+    
+    2. **Middle Ring**: Tool Categories/Substages
+        - These are categories of tools used in each stage
+        - Colored to match their parent stage
+    
+    3. **Outer Ring**: Tool Exemplars
+        - Specific tools that belong to each category
+        - Colored to match their parent category and stage
+    
+    ### Interactivity
+    
+    - **Hover** over any segment to see details
+    - Use the **Focus on Stage** mode to zoom in on a specific stage
+    - Use the **Compare Tools** mode to compare tools across different categories
+    
+    ### Connections
+    
+    - **Solid lines** show the normal flow between stages
+    - **Dashed lines** show alternative connections or feedback loops
+    """)
+
 # Create and display the visualization
 fig = create_lifecycle_visualization(
     lifecycle_data, 
     view_mode=view_mode,
-    selected_stage=selected_stage if view_mode == "Focus on Stage" else None,
-    selected_categories=selected_categories if view_mode == "Compare Tools" else None,
+    selected_stage=selected_stage,
+    selected_categories=selected_categories,
     show_connections=show_connections,
     show_exemplars=show_exemplars,
     connection_types=connection_type
@@ -89,8 +137,8 @@ fig = create_lifecycle_visualization(
 
 st.plotly_chart(fig, use_container_width=True)
 
-# Details section
-if view_mode == "Focus on Stage":
+# Additional information based on view mode
+if view_mode == "Focus on Stage" and selected_stage:
     st.header(f"{selected_stage} Stage Details")
     
     # Find the selected stage data
@@ -100,87 +148,114 @@ if view_mode == "Focus on Stage":
         st.subheader("Description")
         st.write(stage_data["description"])
         
+        # Get categories and tools for this stage
+        stage_tools = {}
+        for exemplar in lifecycle_data["exemplars"]:
+            if exemplar["stage"] == selected_stage:
+                if exemplar["category"] not in stage_tools:
+                    stage_tools[exemplar["category"]] = []
+                stage_tools[exemplar["category"]].append(exemplar)
+        
         st.subheader("Tool Categories and Exemplars")
         
-        # Get exemplars for this stage
-        stage_exemplars = [ex for ex in lifecycle_data["exemplars"] if ex["stage"] == selected_stage]
-        
-        # Group by category
-        exemplars_by_category = {}
-        for exemplar in stage_exemplars:
-            if exemplar["category"] not in exemplars_by_category:
-                exemplars_by_category[exemplar["category"]] = []
-            exemplars_by_category[exemplar["category"]].append(exemplar)
-        
-        # Display each category
-        for category, exemplars in exemplars_by_category.items():
-            with st.expander(f"{category} ({len(exemplars)} tools)", expanded=True):
+        # Display each category in an expander
+        for category, tools in stage_tools.items():
+            with st.expander(f"{category} ({len(tools)} tools)", expanded=True):
                 # Create a DataFrame for better display
-                exemplar_df = pd.DataFrame([{
-                    "Tool Name": ex["name"],
-                    "Description": ex["description"]
-                } for ex in exemplars])
+                tools_df = pd.DataFrame([{
+                    "Tool Name": tool["name"],
+                    "Description": tool["description"]
+                } for tool in tools])
                 
-                st.dataframe(exemplar_df, use_container_width=True)
+                st.dataframe(tools_df, use_container_width=True)
 
-elif view_mode == "Compare Tools":
-    st.header("Tool Comparison")
+elif view_mode == "Compare Tools" and selected_categories:
+    st.header("Tool Category Comparison")
     
-    # Filter exemplars by selected categories
-    filtered_exemplars = [ex for ex in lifecycle_data["exemplars"] 
-                         if ex["category"] in selected_categories]
+    # Create a DataFrame with tools from selected categories
+    tools_data = []
+    for exemplar in lifecycle_data["exemplars"]:
+        if exemplar["category"] in selected_categories:
+            tools_data.append({
+                "Tool Name": exemplar["name"],
+                "Category": exemplar["category"],
+                "Stage": exemplar["stage"],
+                "Description": exemplar["description"]
+            })
     
-    # Group by tool name to handle duplicates across stages
-    exemplars_by_name = {}
-    for exemplar in filtered_exemplars:
-        if exemplar["name"] not in exemplars_by_name:
-            exemplars_by_name[exemplar["name"]] = exemplar
-            exemplars_by_name[exemplar["name"]]["stages"] = [exemplar["stage"]]
-        else:
-            if exemplar["stage"] not in exemplars_by_name[exemplar["name"]]["stages"]:
-                exemplars_by_name[exemplar["name"]]["stages"].append(exemplar["stage"])
+    tools_df = pd.DataFrame(tools_data)
     
-    # Create DataFrame for display
-    comparison_data = []
-    for name, ex in exemplars_by_name.items():
-        comparison_data.append({
-            "Tool Name": name,
-            "Category": ex["category"],
-            "Stages Used In": ", ".join(ex["stages"]),
-            "Description": ex["description"]
-        })
+    # Display grouped by category
+    for category in selected_categories:
+        category_tools = tools_df[tools_df["Category"] == category]
+        if not category_tools.empty:
+            st.subheader(f"{category}")
+            st.dataframe(
+                category_tools[["Tool Name", "Stage", "Description"]].sort_values("Stage"),
+                use_container_width=True
+            )
     
-    comparison_df = pd.DataFrame(comparison_data)
-    st.dataframe(comparison_df, use_container_width=True)
-
-else:
-    # Show overview of all stages
-    st.header("Lifecycle Stages Overview")
-    
-    # Create two columns
+    # Show statistics
+    st.subheader("Statistics")
     col1, col2 = st.columns(2)
     
-    # First half of stages in first column
-    half_index = len(lifecycle_data["stages"]) // 2
+    with col1:
+        st.metric("Total Tools", len(tools_df))
+        
+        # Count tools per category
+        category_counts = tools_df["Category"].value_counts()
+        
+        # Display as a horizontal bar chart
+        if not category_counts.empty:
+            st.bar_chart(category_counts)
+    
+    with col2:
+        # Count tools per stage within selected categories
+        stage_counts = tools_df["Stage"].value_counts()
+        
+        if not stage_counts.empty:
+            st.metric("Stages Covered", len(stage_counts))
+            st.bar_chart(stage_counts)
+
+else:
+    # Overview of lifecycle stages
+    st.header("Lifecycle Stages Overview")
+    
+    # Create a tabular view of stages and their tools count
+    stage_data = []
+    for stage in lifecycle_data["stages"]:
+        # Count tools for this stage
+        tools_count = len([ex for ex in lifecycle_data["exemplars"] if ex["stage"] == stage["name"]])
+        
+        # Count categories for this stage
+        categories = set(ex["category"] for ex in lifecycle_data["exemplars"] if ex["stage"] == stage["name"])
+        
+        stage_data.append({
+            "Stage": stage["name"],
+            "Description": stage["description"],
+            "Tool Categories": len(categories),
+            "Total Tools": tools_count
+        })
+    
+    # Display as a table
+    st.dataframe(pd.DataFrame(stage_data), use_container_width=True)
+    
+    # Show global statistics
+    st.subheader("Global Statistics")
+    col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        for i, stage in enumerate(lifecycle_data["stages"][:half_index]):
-            with st.expander(f"{stage['name']}", expanded=False):
-                st.write(stage["description"])
-                
-                # Count exemplars for this stage
-                stage_exemplars = [ex for ex in lifecycle_data["exemplars"] if ex["stage"] == stage["name"]]
-                st.write(f"**Number of tools:** {len(stage_exemplars)}")
+        st.metric("Total Stages", len(lifecycle_data["stages"]))
     
-    # Second half of stages in second column
     with col2:
-        for i, stage in enumerate(lifecycle_data["stages"][half_index:]):
-            with st.expander(f"{stage['name']}", expanded=False):
-                st.write(stage["description"])
-                
-                # Count exemplars for this stage
-                stage_exemplars = [ex for ex in lifecycle_data["exemplars"] if ex["stage"] == stage["name"]]
-                st.write(f"**Number of tools:** {len(stage_exemplars)}")
+        total_categories = len(set(ex["category"] for ex in lifecycle_data["exemplars"]))
+        st.metric("Total Tool Categories", total_categories)
+    
+    with col3:
+        st.metric("Total Tools", len(lifecycle_data["exemplars"]))
+    
+    with col4:
+        st.metric("Connections", len(lifecycle_data["connections"]))
 
 # Footer
 st.markdown("""---
