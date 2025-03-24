@@ -5,6 +5,8 @@ Visualization functions for the MaLDReTH Research Data Lifecycle.
 import plotly.graph_objects as go
 import numpy as np
 import math
+import pandas as pd
+from collections import defaultdict
 
 def create_lifecycle_visualization(
     lifecycle_data, 
@@ -16,7 +18,7 @@ def create_lifecycle_visualization(
     connection_types=["normal", "alternative"]
 ):
     """
-    Create a circular visualization of the MaLDReTH Research Data Lifecycle.
+    Create a three-level circular visualization of the MaLDReTH Research Data Lifecycle.
     
     Args:
         lifecycle_data (dict): The lifecycle data including stages, connections, and exemplars.
@@ -34,12 +36,14 @@ def create_lifecycle_visualization(
     config = {
         "center_x": 0,
         "center_y": 0,
-        "inner_radius": 0.2,
-        "middle_radius": 0.5,
-        "outer_radius": 0.8,
+        "center_radius": 0.1,      # Center circle
+        "inner_radius": 0.2,       # Stages (inner ring)
+        "middle_radius": 0.5,      # Substages (middle ring)
+        "outer_radius": 0.8,       # Tools (outer ring)
         "padding": 0.01,
-        "stage_opacity": 0.8,
-        "exemplar_opacity": 0.7
+        "stage_opacity": 0.9,
+        "substage_opacity": 0.8,
+        "tool_opacity": 0.7
     }
     
     # Create figure
@@ -48,10 +52,10 @@ def create_lifecycle_visualization(
     # Add center circle
     fig.add_shape(
         type="circle",
-        x0=-config["inner_radius"],
-        y0=-config["inner_radius"],
-        x1=config["inner_radius"],
-        y1=config["inner_radius"],
+        x0=-config["center_radius"],
+        y0=-config["center_radius"],
+        x1=config["center_radius"],
+        y1=config["center_radius"],
         fillcolor="#f0f0f0",
         line_color="#ccc",
         layer="below"
@@ -76,7 +80,29 @@ def create_lifecycle_visualization(
     # Create a dictionary to store stage positions
     stage_positions = {}
     
-    # Draw stages
+    # Prepare data structures for categories and tools
+    categories_by_stage = defaultdict(list)
+    tools_by_category = defaultdict(list)
+    
+    # Group tool exemplars by stage and category
+    for exemplar in lifecycle_data["exemplars"]:
+        stage_name = exemplar["stage"]
+        category_name = exemplar["category"]
+        
+        # Create a unique category key
+        category_key = f"{stage_name}_{category_name}"
+        
+        # Add category to list if not already there
+        if category_name not in [c["name"] for c in categories_by_stage[stage_name]]:
+            categories_by_stage[stage_name].append({
+                "name": category_name,
+                "key": category_key
+            })
+        
+        # Add tool to category
+        tools_by_category[category_key].append(exemplar)
+    
+    # Draw stages (inner ring)
     for i, stage in enumerate(stages):
         # Calculate angles for this stage
         angle_start = start_angle + i * stage_angle
@@ -86,8 +112,10 @@ def create_lifecycle_visualization(
         middle_angle = (angle_start + angle_end) / 2
         stage_positions[stage["name"]] = {
             "angle": middle_angle,
-            "x": config["middle_radius"] * math.cos(middle_angle),
-            "y": config["middle_radius"] * math.sin(middle_angle)
+            "start_angle": angle_start,
+            "end_angle": angle_end,
+            "x": config["inner_radius"] * math.cos(middle_angle),
+            "y": config["inner_radius"] * math.sin(middle_angle)
         }
         
         # Determine opacity based on view mode
@@ -100,15 +128,16 @@ def create_lifecycle_visualization(
             fig, 
             angle_start, 
             angle_end,
-            config["inner_radius"], 
-            config["middle_radius"],
+            config["center_radius"], 
+            config["inner_radius"],
             stage["color"],
-            opacity=opacity
+            opacity=opacity,
+            hover_text=f"{stage['name']}<br>{stage['description']}"
         )
         
         # Add stage label
         label_angle = middle_angle
-        label_radius = (config["inner_radius"] + config["middle_radius"]) / 2
+        label_radius = (config["center_radius"] + config["inner_radius"]) / 2
         label_x = label_radius * math.cos(label_angle)
         label_y = label_radius * math.sin(label_angle)
         
@@ -123,8 +152,111 @@ def create_lifecycle_visualization(
             text=stage["name"],
             showarrow=False,
             textangle=text_angle,
-            font=dict(size=12, color="#333")
+            font=dict(size=12, color="#333", family="Arial Black")
         )
+    
+    # Draw substages (middle ring)
+    for stage_name, stage_pos in stage_positions.items():
+        stage_color = next((s["color"] for s in stages if s["name"] == stage_name), "#ccc")
+        categories = categories_by_stage[stage_name]
+        num_categories = len(categories)
+        
+        if num_categories > 0:
+            # Calculate angle for each category
+            category_angle = (stage_pos["end_angle"] - stage_pos["start_angle"]) / num_categories
+            
+            for j, category in enumerate(categories):
+                # Calculate angles for this category
+                cat_angle_start = stage_pos["start_angle"] + j * category_angle
+                cat_angle_end = cat_angle_start + category_angle - config["padding"]
+                
+                # Store category position
+                middle_cat_angle = (cat_angle_start + cat_angle_end) / 2
+                category["angle"] = middle_cat_angle
+                category["start_angle"] = cat_angle_start
+                category["end_angle"] = cat_angle_end
+                
+                # Determine opacity
+                opacity = config["substage_opacity"]
+                if view_mode == "Focus on Stage" and stage_name != selected_stage:
+                    opacity = 0.2
+                elif view_mode == "Compare Tools" and selected_categories:
+                    if category["name"] not in selected_categories:
+                        opacity = 0.2
+                
+                # Draw category segment
+                draw_sector(
+                    fig, 
+                    cat_angle_start, 
+                    cat_angle_end,
+                    config["inner_radius"], 
+                    config["middle_radius"],
+                    lighten_color(stage_color, 0.1),
+                    opacity=opacity,
+                    hover_text=f"{category['name']}<br>Stage: {stage_name}"
+                )
+                
+                # Add category label for important categories
+                if (view_mode == "Complete Lifecycle" or 
+                    (view_mode == "Focus on Stage" and stage_name == selected_stage) or
+                    (view_mode == "Compare Tools" and not selected_categories or 
+                     category["name"] in selected_categories)):
+                    
+                    label_radius = (config["inner_radius"] + config["middle_radius"]) / 2
+                    label_x = label_radius * math.cos(middle_cat_angle)
+                    label_y = label_radius * math.sin(middle_cat_angle)
+                    
+                    # Adjust text angle for readability
+                    if middle_cat_angle > math.pi/2 and middle_cat_angle < 3*math.pi/2:
+                        text_angle = (middle_cat_angle * 180 / math.pi) - 180
+                    else:
+                        text_angle = middle_cat_angle * 180 / math.pi
+                    
+                    # Shortened category name if too long
+                    display_name = category["name"]
+                    if len(display_name) > 15:
+                        display_name = display_name[:12] + "..."
+                        
+                    fig.add_annotation(
+                        x=label_x, y=label_y,
+                        text=display_name,
+                        showarrow=False,
+                        textangle=text_angle,
+                        font=dict(size=10, color="#333")
+                    )
+                
+                # Draw tools (outer ring) for this category
+                tools = tools_by_category[category["key"]]
+                num_tools = len(tools)
+                
+                if num_tools > 0 and show_exemplars:
+                    # Calculate angle for each tool
+                    tool_angle = (cat_angle_end - cat_angle_start) / num_tools
+                    
+                    for k, tool in enumerate(tools):
+                        # Calculate angles for this tool
+                        tool_angle_start = cat_angle_start + k * tool_angle
+                        tool_angle_end = tool_angle_start + tool_angle - config["padding"]
+                        
+                        # Determine opacity
+                        opacity = config["tool_opacity"]
+                        if view_mode == "Focus on Stage" and stage_name != selected_stage:
+                            opacity = 0.1
+                        elif view_mode == "Compare Tools" and selected_categories:
+                            if category["name"] not in selected_categories:
+                                opacity = 0.1
+                        
+                        # Draw tool segment
+                        draw_sector(
+                            fig, 
+                            tool_angle_start, 
+                            tool_angle_end,
+                            config["middle_radius"], 
+                            config["outer_radius"],
+                            lighten_color(stage_color, 0.2),
+                            opacity=opacity,
+                            hover_text=f"{tool['name']}<br>{tool['description']}<br>Category: {category['name']}<br>Stage: {stage_name}"
+                        )
     
     # Draw connections between stages if enabled
     if show_connections:
@@ -136,10 +268,18 @@ def create_lifecycle_visualization(
                 # Determine line style based on connection type
                 line_dash = "solid" if connection["type"] == "normal" else "dash"
                 
+                # Create curved path between stages
+                path = create_curved_path(
+                    from_pos["x"], from_pos["y"], 
+                    to_pos["x"], to_pos["y"], 
+                    config["inner_radius"] * 0.6,  # Control point offset
+                    steps=50
+                )
+                
                 # Draw connection line
                 fig.add_trace(go.Scatter(
-                    x=[from_pos["x"], to_pos["x"]],
-                    y=[from_pos["y"], to_pos["y"]],
+                    x=path[0],
+                    y=path[1],
                     mode="lines",
                     line=dict(color="#555", width=1.5, dash=line_dash),
                     hoverinfo="none",
@@ -147,60 +287,12 @@ def create_lifecycle_visualization(
                 ))
                 
                 # Add arrow marker
-                add_arrow(fig, from_pos["x"], from_pos["y"], to_pos["x"], to_pos["y"])
-    
-    # Draw exemplars if enabled
-    if show_exemplars:
-        # Group exemplars by stage
-        exemplars_by_stage = {}
-        for exemplar in lifecycle_data["exemplars"]:
-            if exemplar["stage"] not in exemplars_by_stage:
-                exemplars_by_stage[exemplar["stage"]] = []
-            
-            # Apply category filter if in Compare Tools mode
-            if view_mode == "Compare Tools" and selected_categories:
-                if exemplar["category"] in selected_categories:
-                    exemplars_by_stage[exemplar["stage"]].append(exemplar)
-            else:
-                exemplars_by_stage[exemplar["stage"]].append(exemplar)
-        
-        # Draw exemplars for each stage
-        for stage_name, exemplars in exemplars_by_stage.items():
-            if stage_name not in stage_positions:
-                continue
-                
-            # Skip if not the selected stage in Focus mode
-            if view_mode == "Focus on Stage" and stage_name != selected_stage:
-                continue
-                
-            # Get stage position and color
-            stage_pos = stage_positions[stage_name]
-            stage_color = next((s["color"] for s in stages if s["name"] == stage_name), "#ccc")
-            
-            # Calculate exemplar positions
-            num_exemplars = len(exemplars)
-            if num_exemplars > 0:
-                exemplar_angle = stage_angle / max(num_exemplars, 1)
-                
-                # Calculate starting angle for this stage's exemplars
-                exemplar_start_angle = stage_pos["angle"] - stage_angle / 2
-                
-                for j, exemplar in enumerate(exemplars):
-                    # Calculate angles for this exemplar
-                    ex_angle_start = exemplar_start_angle + j * exemplar_angle
-                    ex_angle_end = ex_angle_start + exemplar_angle - config["padding"]
-                    
-                    # Draw exemplar segment
-                    draw_sector(
-                        fig, 
-                        ex_angle_start, 
-                        ex_angle_end,
-                        config["middle_radius"], 
-                        config["outer_radius"],
-                        lighten_color(stage_color, 0.2),
-                        opacity=config["exemplar_opacity"],
-                        hover_text=f"{exemplar['name']}<br>{exemplar['category']}<br>{exemplar['description']}"
-                    )
+                add_arrow(
+                    fig, 
+                    path[0][-2], path[1][-2],  # Second-to-last point
+                    path[0][-1], path[1][-1],  # Last point
+                    arrow_size=0.02
+                )
     
     # Configure the layout
     fig.update_layout(
@@ -269,6 +361,45 @@ def draw_sector(fig, angle_start, angle_end, r_inner, r_outer, color, opacity=0.
         showlegend=False
     ))
 
+def create_curved_path(x1, y1, x2, y2, control_offset=0.3, steps=50):
+    """
+    Create a curved path between two points using a quadratic Bezier curve.
+    
+    Args:
+        x1, y1: Starting point coordinates
+        x2, y2: Ending point coordinates
+        control_offset: Distance from midpoint for control point
+        steps: Number of points to generate along the curve
+        
+    Returns:
+        tuple: Two arrays containing x and y coordinates of the path
+    """
+    # Calculate midpoint
+    mx = (x1 + x2) / 2
+    my = (y1 + y2) / 2
+    
+    # Find perpendicular direction
+    dx = x2 - x1
+    dy = y2 - y1
+    length = math.sqrt(dx * dx + dy * dy)
+    udx = dx / length if length > 0 else 0
+    udy = dy / length if length > 0 else 0
+    
+    # Perpendicular vector
+    pdx = -udy
+    pdy = udx
+    
+    # Control point
+    cx = mx + pdx * control_offset
+    cy = my + pdy * control_offset
+    
+    # Generate points along the quadratic Bezier curve
+    t = np.linspace(0, 1, steps)
+    x = (1-t)**2 * x1 + 2*(1-t)*t * cx + t**2 * x2
+    y = (1-t)**2 * y1 + 2*(1-t)*t * cy + t**2 * y2
+    
+    return x, y
+
 def add_arrow(fig, x0, y0, x1, y1, arrow_size=0.02, color="#555"):
     """
     Add an arrow marker to indicate direction in a connection.
@@ -288,12 +419,8 @@ def add_arrow(fig, x0, y0, x1, y1, arrow_size=0.02, color="#555"):
     
     # Normalize
     length = math.sqrt(dx**2 + dy**2)
-    udx = dx / length
-    udy = dy / length
-    
-    # Calculate arrow position (slightly before the end point)
-    arrow_x = x1 - udx * 0.05
-    arrow_y = y1 - udy * 0.05
+    udx = dx / length if length > 0 else 0
+    udy = dy / length if length > 0 else 0
     
     # Calculate perpendicular vector for arrow head
     perpx = -udy
@@ -301,12 +428,12 @@ def add_arrow(fig, x0, y0, x1, y1, arrow_size=0.02, color="#555"):
     
     # Add arrow head
     fig.add_trace(go.Scatter(
-        x=[arrow_x - arrow_size * (udx - perpx), 
-           arrow_x, 
-           arrow_x - arrow_size * (udx + perpx)],
-        y=[arrow_y - arrow_size * (udy - perpy), 
-           arrow_y, 
-           arrow_y - arrow_size * (udy + perpy)],
+        x=[x1 - arrow_size * (udx - perpx), 
+           x1, 
+           x1 - arrow_size * (udx + perpx)],
+        y=[y1 - arrow_size * (udy - perpy), 
+           y1, 
+           y1 - arrow_size * (udy + perpy)],
         fill="toself",
         fillcolor=color,
         line=dict(color=color),
