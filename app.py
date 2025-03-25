@@ -32,7 +32,8 @@ This visualization shows the MaLDReTH Research Data Lifecycle with a three-level
 - **Middle Ring**: Tool Categories/Substages
 - **Outer Ring**: Tool Exemplars
 
-Use the controls below to explore the lifecycle and learn about the various tools available at each stage.
+Use the controls below and to the left to explore the lifecycle and learn about 
+the various tools available at each stage.
 """)
 
 # Load lifecycle data
@@ -64,9 +65,10 @@ if view_mode == "Focus on Stage":
             if exemplar["stage"] == selected_stage:
                 stage_categories.add(exemplar["category"])
         
-        st.sidebar.markdown(f"### Categories in {selected_stage}")
-        for category in sorted(stage_categories):
-            st.sidebar.markdown(f"- {category}")
+        if stage_categories:
+            st.sidebar.markdown(f"### Categories in {selected_stage}")
+            for category in sorted(stage_categories):
+                st.sidebar.markdown(f"- {category}")
 
 elif view_mode == "Compare Tools":
     # Multi-select for tool categories
@@ -82,23 +84,81 @@ elif view_mode == "Compare Tools":
 
 # Display options
 st.sidebar.header("Display Options")
-show_connections = st.sidebar.checkbox("Show Connections", value=True)
-show_exemplars = st.sidebar.checkbox("Show Tool Exemplars", value=True)
-connection_type = st.sidebar.multiselect(
-    "Connection Types to Show",
-    ["normal", "alternative"],
-    default=["normal", "alternative"]
-)
 
-# Main visualization
+# Level visibility controls
+st.sidebar.markdown("### Show/Hide Levels")
+show_connections = st.sidebar.checkbox("Show Connections", value=True)
+show_substages = st.sidebar.checkbox("Show Substages", value=True)
+show_tools = st.sidebar.checkbox("Show Tools", value=False)
+
+# Connection type filter
+if show_connections:
+    connection_type = st.sidebar.multiselect(
+        "Connection Types to Show",
+        ["normal", "alternative"],
+        default=["normal", "alternative"]
+    )
+else:
+    connection_type = []
+
+# Main visualization with control buttons at the top
 st.header("Lifecycle Visualization")
+
+# Add buttons for quick controls
+col1, col2, col3, col4 = st.columns(4)
+with col1:
+    if st.button("Show All Levels"):
+        show_connections = True
+        show_substages = True
+        show_tools = True
+with col2:
+    if st.button("Show Stages & Substages"):
+        show_connections = True
+        show_substages = True
+        show_tools = False
+with col3:
+    if st.button("Show Stages Only"):
+        show_connections = True
+        show_substages = False
+        show_tools = False
+with col4:
+    if st.button("Reset View"):
+        # Reset to default view
+        show_connections = True
+        show_substages = True
+        show_tools = False
+        view_mode = "Complete Lifecycle"
+        selected_stage = None
+        selected_categories = None
+
+# Store session state
+if 'show_connections' not in st.session_state:
+    st.session_state.show_connections = show_connections
+if 'show_substages' not in st.session_state:
+    st.session_state.show_substages = show_substages
+if 'show_tools' not in st.session_state:
+    st.session_state.show_tools = show_tools
+if 'view_mode' not in st.session_state:
+    st.session_state.view_mode = view_mode
+if 'selected_stage' not in st.session_state:
+    st.session_state.selected_stage = selected_stage
+if 'selected_categories' not in st.session_state:
+    st.session_state.selected_categories = selected_categories
+
+# Update session state based on controls
+st.session_state.show_connections = show_connections
+st.session_state.show_substages = show_substages
+st.session_state.show_tools = show_tools
+st.session_state.view_mode = view_mode
+st.session_state.selected_stage = selected_stage
+st.session_state.selected_categories = selected_categories
 
 # Explanation of the three-level structure
 with st.expander("How to Read This Visualization", expanded=False):
     st.markdown("""
     ### Three-Level Structure
     
-    This visualization uses a concentric circle layout with three levels:
+    This visualization uses a concentric circle layout with three levels, separated by white space for clarity:
     
     1. **Inner Ring (Center)**: Research Data Lifecycle Stages
         - These are the main phases of the research data lifecycle
@@ -117,6 +177,7 @@ with st.expander("How to Read This Visualization", expanded=False):
     - **Hover** over any segment to see details
     - Use the **Focus on Stage** mode to zoom in on a specific stage
     - Use the **Compare Tools** mode to compare tools across different categories
+    - Use the buttons at the top to quickly change what's displayed
     
     ### Connections
     
@@ -127,15 +188,28 @@ with st.expander("How to Read This Visualization", expanded=False):
 # Create and display the visualization
 fig = create_lifecycle_visualization(
     lifecycle_data, 
-    view_mode=view_mode,
-    selected_stage=selected_stage,
-    selected_categories=selected_categories,
-    show_connections=show_connections,
-    show_exemplars=show_exemplars,
+    view_mode=st.session_state.view_mode,
+    selected_stage=st.session_state.selected_stage,
+    selected_categories=st.session_state.selected_categories,
+    show_connections=st.session_state.show_connections,
+    show_substages=st.session_state.show_substages,
+    show_tools=st.session_state.show_tools,
     connection_types=connection_type
 )
 
-st.plotly_chart(fig, use_container_width=True)
+# Register click events
+config = {
+    'displayModeBar': True,
+    'modeBarButtonsToRemove': ['zoom', 'pan', 'select', 'lasso2d', 'zoomIn', 'zoomOut', 'autoScale', 'resetScale'],
+    'displaylogo': False,
+    'responsive': True
+}
+
+# Display the figure with click handling
+st.plotly_chart(fig, use_container_width=True, config=config)
+
+# Display help text for interactive elements
+st.info("**Interactive Tips**: Click on any stage to focus on it. Use the sidebar controls to customize the view.")
 
 # Additional information based on view mode
 if view_mode == "Focus on Stage" and selected_stage:
@@ -170,6 +244,13 @@ if view_mode == "Focus on Stage" and selected_stage:
                 st.dataframe(tools_df, use_container_width=True)
 
 elif view_mode == "Compare Tools" and selected_categories:
+    st.header("Tool Category Comparison")
+    
+    # Create a DataFrame with tools from selected categories
+    tools_data = []
+    for exemplar in lifecycle_data["exemplars"]:
+        if exemplar["category"]
+        elif view_mode == "Compare Tools" and selected_categories:
     st.header("Tool Category Comparison")
     
     # Create a DataFrame with tools from selected categories
@@ -256,6 +337,52 @@ else:
     
     with col4:
         st.metric("Connections", len(lifecycle_data["connections"]))
+
+# Add JavaScript for click event handling
+st.markdown("""
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const plotDiv = document.querySelector('.js-plotly-plot');
+    if (plotDiv) {
+        plotDiv.on('plotly_click', function(data) {
+            const point = data.points[0];
+            const customdata = point.customdata;
+            const meta = point.meta;
+            
+            // Handle click based on segment type
+            if (customdata === 'stage') {
+                // Focus on the stage
+                const stage = meta.stage;
+                if (stage) {
+                    // Use Streamlit's postMessage to communicate with the Python code
+                    window.parent.postMessage({
+                        type: 'streamlit:setComponentValue',
+                        value: {
+                            action: 'focus_stage',
+                            stage: stage
+                        }
+                    }, '*');
+                }
+            } else if (customdata === 'category') {
+                // Focus on the category
+                const stage = meta.stage;
+                const category = meta.category;
+                if (stage && category) {
+                    window.parent.postMessage({
+                        type: 'streamlit:setComponentValue',
+                        value: {
+                            action: 'focus_category',
+                            stage: stage,
+                            category: category
+                        }
+                    }, '*');
+                }
+            }
+        });
+    }
+});
+</script>
+""", unsafe_allow_html=True)
 
 # Footer
 st.markdown("""---
