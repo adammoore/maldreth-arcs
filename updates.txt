@@ -24,3 +24,37 @@
 - Enhanced GitHub Actions workflow for more robust deployment
 - Improved error handling in data loading
 - Added automatic creation of necessary directories
+
+# Updates Log for MaLDReTH Research Data Lifecycle Visualization
+
+## 2024-03-24: Major Layout and Interaction Improvements
+- Moved Fund stage to inside the main cycle
+- Positioned arrows between stages and substages
+- Added dashed return arrows (Store → Analyse → Process → Collect)
+- Added arrows to and from Fund
+- Increased gaps between stages for better readability
+- Aligned stage text labels with the arc of the cycle
+- Improved formatting of info tooltips with boxed layout
+- Updated center label to "MaLDReTH Research Data Lifecycle"
+- Enhanced overall spacing and visual clarity
+
+## 2024-03-24: Enhanced Interactive Visualization
+- Added clear separation between rings with white space between levels
+- Implemented interactive controls for showing/hiding different levels
+- Added global buttons for quick view changes (Show All, Show Stages Only, etc.)
+- Reduced visual crowding by improving spacing and layout
+- Enhanced hover tooltips with better formatting
+
+## 2024-03-24: Improved User Experience
+- Added click handling for stages and categories
+- Implemented session state to maintain view settings between interactions
+- Added visual cues to indicate interactive elements
+- Improved label placement and visibility
+- Added help text and expanded explanation of visualization
+
+## 2024-03-24: Optimized Three-Level Display
+- Adjusted radius and padding settings for clearer visualization
+- Implemented proper radial separators between rings
+- Used color gradients to visually connect related elements across rings
+- Optimized text labels to reduce overlap and improve readability
+- Added responsive design elements for different screen sizes
