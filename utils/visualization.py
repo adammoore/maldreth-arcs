@@ -38,11 +38,12 @@ def create_lifecycle_visualization(
         "center_x": 0,
         "center_y": 0,
         "center_radius": 0.15,     # Center circle
-        "inner_radius": 0.28,      # Stages (inner ring)
-        "middle_radius": 0.50,     # Substages (middle ring)
-        "outer_radius": 0.75,      # Tools (outer ring)
-        "padding_angle": 0.02,     # Angular padding between segments
-        "ring_padding": 0.03,      # Radial padding between rings
+        "fund_radius": 0.22,       # Radius for Fund stage (inner)
+        "inner_radius": 0.33,      # Stages (inner ring)
+        "middle_radius": 0.55,     # Substages (middle ring)
+        "outer_radius": 0.78,      # Tools (outer ring)
+        "padding_angle": 0.04,     # Angular padding between segments (increased)
+        "ring_padding": 0.04,      # Radial padding between rings (increased)
         "stage_opacity": 0.9,
         "substage_opacity": 0.8,
         "tool_opacity": 0.7
@@ -104,7 +105,7 @@ def create_lifecycle_visualization(
     # Add center text
     fig.add_annotation(
         x=0, y=0,
-        text="Research<br>Data<br>Lifecycle",
+        text="MaLDReTH<br>Research Data<br>Lifecycle",
         showarrow=False,
         font=dict(size=14, color="#333", family="Arial"),
         align="center"
@@ -112,14 +113,83 @@ def create_lifecycle_visualization(
     
     # Get stages
     stages = lifecycle_data["stages"]
-    num_stages = len(stages)
     
-    # Calculate stage angles
+    # Separate Fund from main cycle stages
+    fund_stage = None
+    main_cycle_stages = []
+    
+    for stage in stages:
+        if stage["name"] == "Fund":
+            fund_stage = stage
+        else:
+            main_cycle_stages.append(stage)
+    
+    # Number of stages in the main cycle
+    num_stages = len(main_cycle_stages)
+    
+    # Calculate stage angles for main cycle
     stage_angle = 2 * math.pi / num_stages
     start_angle = -math.pi / 2  # Start at the top
     
     # Create a dictionary to store stage positions
     stage_positions = {}
+    
+    # Draw Fund stage separately inside the main cycle
+    if fund_stage:
+        # Place Fund inside at a specific position
+        fund_angle_start = -math.pi/4  # Position in the upper right
+        fund_angle_end = fund_angle_start + math.pi/2  # Cover 90 degrees
+        
+        # Middle angle for Fund
+        fund_middle_angle = (fund_angle_start + fund_angle_end) / 2
+        
+        # Store Fund position
+        stage_positions[fund_stage["name"]] = {
+            "angle": fund_middle_angle,
+            "start_angle": fund_angle_start,
+            "end_angle": fund_angle_end,
+            "x": config["fund_radius"] * math.cos(fund_middle_angle),
+            "y": config["fund_radius"] * math.sin(fund_middle_angle)
+        }
+        
+        # Inner radius with padding for Fund
+        r_inner = config["center_radius"] + config["ring_padding"]
+        # Outer radius with padding for Fund
+        r_outer = config["fund_radius"] - config["ring_padding"]
+        
+        # Draw Fund segment
+        draw_sector(
+            fig, 
+            fund_angle_start, 
+            fund_angle_end,
+            r_inner, 
+            r_outer,
+            fund_stage["color"],
+            opacity=config["stage_opacity"],
+            hover_text=f"<b>{fund_stage['name']}</b><br>{fund_stage['description']}",
+            stage_name=fund_stage['name'],
+            segment_type="stage"
+        )
+        
+        # Add Fund label
+        label_angle = fund_middle_angle
+        label_radius = (r_inner + r_outer) / 2
+        label_x = label_radius * math.cos(label_angle)
+        label_y = label_radius * math.sin(label_angle)
+        
+        # Adjust text angle for readability
+        text_angle = (label_angle * 180 / math.pi)
+        if label_angle > math.pi/2 and label_angle < 3*math.pi/2:
+            text_angle -= 180
+            
+        fig.add_annotation(
+            x=label_x, y=label_y,
+            text=fund_stage["name"],
+            showarrow=False,
+            textangle=text_angle,
+            font=dict(size=12, color="#333", family="Arial"),
+            align="center"
+        )
     
     # Prepare data structures for categories and tools
     categories_by_stage = defaultdict(list)
@@ -143,8 +213,8 @@ def create_lifecycle_visualization(
         # Add tool to category
         tools_by_category[category_key].append(exemplar)
     
-    # Draw stages (inner ring)
-    for i, stage in enumerate(stages):
+    # Draw main cycle stages
+    for i, stage in enumerate(main_cycle_stages):
         # Calculate angles for this stage
         angle_start = start_angle + i * stage_angle
         angle_end = angle_start + stage_angle - config["padding_angle"]
@@ -155,8 +225,8 @@ def create_lifecycle_visualization(
             "angle": middle_angle,
             "start_angle": angle_start,
             "end_angle": angle_end,
-            "x": (config["center_radius"] + config["inner_radius"]) / 2 * math.cos(middle_angle),
-            "y": (config["center_radius"] + config["inner_radius"]) / 2 * math.sin(middle_angle)
+            "x": (config["inner_radius"] + config["ring_padding"]) * math.cos(middle_angle),
+            "y": (config["inner_radius"] + config["ring_padding"]) * math.sin(middle_angle)
         }
         
         # Determine opacity based on view mode
@@ -165,7 +235,7 @@ def create_lifecycle_visualization(
             opacity = 0.4
         
         # Inner radius with padding
-        r_inner = config["center_radius"] + config["ring_padding"]
+        r_inner = config["fund_radius"] + config["ring_padding"]
         # Outer radius with padding
         r_outer = config["inner_radius"] - config["ring_padding"]
         
@@ -183,24 +253,23 @@ def create_lifecycle_visualization(
             segment_type="stage"
         )
         
-        # Add stage label
+        # Add stage label aligned to the arc
         label_angle = middle_angle
         label_radius = (r_inner + r_outer) / 2
         label_x = label_radius * math.cos(label_angle)
         label_y = label_radius * math.sin(label_angle)
         
-        # Adjust text angle for readability
+        # Adjust text angle to follow the arc
+        text_angle = (label_angle * 180 / math.pi)
         if label_angle > math.pi/2 and label_angle < 3*math.pi/2:
-            text_angle = (label_angle * 180 / math.pi) - 180
-        else:
-            text_angle = label_angle * 180 / math.pi
+            text_angle -= 180
             
         fig.add_annotation(
             x=label_x, y=label_y,
             text=stage["name"],
             showarrow=False,
             textangle=text_angle,
-            font=dict(size=10, color="#333", family="Arial"),
+            font=dict(size=11, color="#333", family="Arial"),
             align="center"
         )
     
@@ -264,11 +333,10 @@ def create_lifecycle_visualization(
                         label_x = label_radius * math.cos(middle_cat_angle)
                         label_y = label_radius * math.sin(middle_cat_angle)
                         
-                        # Adjust text angle for readability
+                        # Adjust text angle to follow the arc
+                        text_angle = (middle_cat_angle * 180 / math.pi)
                         if middle_cat_angle > math.pi/2 and middle_cat_angle < 3*math.pi/2:
-                            text_angle = (middle_cat_angle * 180 / math.pi) - 180
-                        else:
-                            text_angle = middle_cat_angle * 180 / math.pi
+                            text_angle -= 180
                         
                         # Shortened category name if too long
                         display_name = category["name"]
@@ -283,7 +351,7 @@ def create_lifecycle_visualization(
                                 text=display_name,
                                 showarrow=False,
                                 textangle=text_angle,
-                                font=dict(size=8, color="#333"),
+                                font=dict(size=9, color="#333"),
                                 align="center"
                             )
                     
@@ -332,6 +400,10 @@ def create_lifecycle_visualization(
     
     # Draw connections between stages if enabled
     if show_connections:
+        # Draw connection between stages and substages
+        arrow_radius = (config["inner_radius"] + config["ring_padding"] * 2)
+        
+        # First, draw normal connections in the main cycle
         for connection in lifecycle_data["connections"]:
             if connection["type"] in connection_types:
                 # Skip if either the source or target stage doesn't exist
@@ -349,10 +421,74 @@ def create_lifecycle_visualization(
                     fig,
                     from_pos["angle"],
                     to_pos["angle"],
-                    config["center_radius"] * 0.8,  # Radius for connections
+                    arrow_radius,  # Radius for connections (between stages and substages)
                     line_type=line_dash,
+                    line_width=2 if connection["type"] == "normal" else 1.5,
                     hover_text=f"Connection: {connection['from']} → {connection['to']}<br>Type: {connection['type']}"
                 )
+        
+        # Add the special return connections (Store → Analyse, Analyse → Process, Process → Collect)
+        return_connections = [
+            {"from": "Store", "to": "Analyse"},
+            {"from": "Analyse", "to": "Process"},
+            {"from": "Process", "to": "Collect"}
+        ]
+        
+        for conn in return_connections:
+            if conn["from"] in stage_positions and conn["to"] in stage_positions:
+                from_pos = stage_positions[conn["from"]]
+                to_pos = stage_positions[conn["to"]]
+                
+                # Draw dashed return connection
+                draw_connection(
+                    fig,
+                    from_pos["angle"],
+                    to_pos["angle"],
+                    arrow_radius,
+                    line_type="dash",
+                    line_width=1.5,
+                    hover_text=f"Return connection: {conn['from']} → {conn['to']}"
+                )
+        
+        # Add connections to/from Fund
+        if "Fund" in stage_positions:
+            fund_connections = [
+                {"from": "Fund", "to": "Plan"},
+                {"from": "Fund", "to": "Conceptualise"},
+                {"from": "Conceptualise", "to": "Fund", "type": "return"}
+            ]
+            
+            for conn in fund_connections:
+                if conn["from"] in stage_positions and conn["to"] in stage_positions:
+                    from_pos = stage_positions[conn["from"]]
+                    to_pos = stage_positions[conn["to"]]
+                    
+                    # Draw connection to/from Fund
+                    line_type = "dash" if conn.get("type") == "return" else "solid"
+                    
+                    # For connections to/from Fund, use custom curved connections
+                    if conn["from"] == "Fund" or conn["to"] == "Fund":
+                        # Calculate points for a curved line
+                        from_x = config["fund_radius"] * math.cos(from_pos["angle"])
+                        from_y = config["fund_radius"] * math.sin(from_pos["angle"])
+                        
+                        to_x = config["inner_radius"] * math.cos(to_pos["angle"]) 
+                        to_y = config["inner_radius"] * math.sin(to_pos["angle"])
+                        
+                        # Calculate control point (mid-point with offset)
+                        mid_x = (from_x + to_x) / 2
+                        mid_y = (from_y + to_y) / 2
+                        
+                        # Draw custom curved line
+                        draw_custom_curve(
+                            fig,
+                            from_x, from_y,
+                            to_x, to_y,
+                            mid_x, mid_y,
+                            line_type=line_type,
+                            line_width=1.5,
+                            hover_text=f"Connection: {conn['from']} → {conn['to']}"
+                        )
     
     # Configure the layout
     fig.update_layout(
@@ -376,12 +512,20 @@ def create_lifecycle_visualization(
         hoverlabel=dict(
             bgcolor="white",
             font_size=12,
-            font_family="Arial"
+            font_family="Arial",
+            bordercolor="#cccccc"
         )
     )
     
-    # Enable hover information
-    fig.update_traces(hovertemplate="%{text}")
+    # Enable hover information with better formatting
+    fig.update_traces(
+        hovertemplate="<b>%{text}</b>",
+        hoverlabel=dict(
+            bgcolor="white",
+            font_size=12,
+            bordercolor="#cccccc"
+        )
+    )
     
     return fig
 
@@ -442,7 +586,7 @@ def draw_sector(fig, angle_start, angle_end, r_inner, r_outer, color, opacity=0.
         name=f"{stage_name or ''}-{category_name or ''}-{tool_name or ''}"
     ))
 
-def draw_connection(fig, angle1, angle2, radius, line_type="solid", hover_text=None):
+def draw_connection(fig, angle1, angle2, radius, line_type="solid", line_width=1.5, hover_text=None):
     """
     Draw a connection between two points on the circle.
     
@@ -452,6 +596,7 @@ def draw_connection(fig, angle1, angle2, radius, line_type="solid", hover_text=N
         angle2 (float): The ending angle in radians.
         radius (float): The radius of the circle.
         line_type (str, optional): The type of line ("solid" or "dash"). Defaults to "solid".
+        line_width (float, optional): The width of the line. Defaults to 1.5.
         hover_text (str, optional): The hover text for the connection. Defaults to None.
     """
     # Ensure angles are in the right order for the shortest path
@@ -477,7 +622,7 @@ def draw_connection(fig, angle1, angle2, radius, line_type="solid", hover_text=N
         mode="lines",
         line=dict(
             color="#555",
-            width=1.5,
+            width=line_width,
             dash="dash" if line_type == "dash" else "solid"
         ),
         hoverinfo="text" if hover_text else "none",
@@ -489,13 +634,79 @@ def draw_connection(fig, angle1, angle2, radius, line_type="solid", hover_text=N
     last_angle = theta[-1]
     arrow_angle = last_angle + math.pi / 2  # Perpendicular to the tangent
     
-    arrow_length = 0.02
+    arrow_length = 0.025
     arrow_x = [x[-1], 
                x[-1] + arrow_length * math.cos(arrow_angle + math.pi/8), 
                x[-1] + arrow_length * math.cos(arrow_angle - math.pi/8)]
     arrow_y = [y[-1], 
                y[-1] + arrow_length * math.sin(arrow_angle + math.pi/8), 
                y[-1] + arrow_length * math.sin(arrow_angle - math.pi/8)]
+    
+    fig.add_trace(go.Scatter(
+        x=arrow_x, y=arrow_y,
+        fill="toself",
+        fillcolor="#555",
+        line=dict(color="#555"),
+        hoverinfo="none",
+        showlegend=False
+    ))
+
+def draw_custom_curve(fig, x1, y1, x2, y2, cx, cy, line_type="solid", line_width=1.5, hover_text=None):
+    """
+    Draw a custom curved connection between two points.
+    
+    Args:
+        fig (plotly.graph_objects.Figure): The figure to add the connection to.
+        x1, y1 (float): Starting point coordinates.
+        x2, y2 (float): Ending point coordinates.
+        cx, cy (float): Control point coordinates.
+        line_type (str, optional): The type of line ("solid" or "dash"). Defaults to "solid".
+        line_width (float, optional): The width of the line. Defaults to 1.5.
+        hover_text (str, optional): The hover text for the connection. Defaults to None.
+    """
+    # Generate points for a quadratic Bezier curve
+    t = np.linspace(0, 1, 50)
+    
+    # Quadratic Bezier formula: B(t) = (1-t)²P₀ + 2(1-t)tP₁ + t²P₂
+    x = (1-t)**2 * x1 + 2*(1-t)*t * cx + t**2 * x2
+    y = (1-t)**2 * y1 + 2*(1-t)*t * cy + t**2 * y2
+    
+    # Draw the curved connection
+    fig.add_trace(go.Scatter(
+        x=x, y=y,
+        mode="lines",
+        line=dict(
+            color="#555",
+            width=line_width,
+            dash="dash" if line_type == "dash" else "solid"
+        ),
+        hoverinfo="text" if hover_text else "none",
+        text=hover_text,
+        showlegend=False
+    ))
+    
+    # Add an arrow at the end
+    # Calculate the direction at the end point (derivative of the Bezier curve)
+    dx_end = 2*(1-t[-1])*(cx-x1) + 2*t[-1]*(x2-cx)
+    dy_end = 2*(1-t[-1])*(cy-y1) + 2*t[-1]*(y2-cy)
+    
+    # Normalize the direction vector
+    length = math.sqrt(dx_end**2 + dy_end**2)
+    if length > 0:
+        dx_end /= length
+        dy_end /= length
+    
+    # Perpendicular vectors for the arrow
+    perpx = -dy_end
+    perpy = dx_end
+    
+    arrow_length = 0.025
+    arrow_x = [x[-1], 
+               x[-1] - arrow_length * (dx_end - perpx * 0.5), 
+               x[-1] - arrow_length * (dx_end + perpx * 0.5)]
+    arrow_y = [y[-1], 
+               y[-1] - arrow_length * (dy_end - perpy * 0.5), 
+               y[-1] - arrow_length * (dy_end + perpy * 0.5)]
     
     fig.add_trace(go.Scatter(
         x=arrow_x, y=arrow_y,
