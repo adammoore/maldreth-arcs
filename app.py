@@ -249,13 +249,6 @@ elif view_mode == "Compare Tools" and selected_categories:
     # Create a DataFrame with tools from selected categories
     tools_data = []
     for exemplar in lifecycle_data["exemplars"]:
-        if exemplar["category"]
-        elif view_mode == "Compare Tools" and selected_categories:
-    st.header("Tool Category Comparison")
-    
-    # Create a DataFrame with tools from selected categories
-    tools_data = []
-    for exemplar in lifecycle_data["exemplars"]:
         if exemplar["category"] in selected_categories:
             tools_data.append({
                 "Tool Name": exemplar["name"],
@@ -297,7 +290,6 @@ elif view_mode == "Compare Tools" and selected_categories:
         if not stage_counts.empty:
             st.metric("Stages Covered", len(stage_counts))
             st.bar_chart(stage_counts)
-
 else:
     # Overview of lifecycle stages
     st.header("Lifecycle Stages Overview")
